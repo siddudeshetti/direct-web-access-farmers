@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <h2>Farmer Portal</h2>
+
+        <div>
+            <a href="/farmer/dashboard">Dashboard</a>
+            <a href="/farmer/add-product">Add Product</a>
+            <a href="/farmer/products">My Products</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <main class="dashboard">
+
+        <h1 id="welcome">Welcome Farmer</h1>
+
+        <div class="card-container">
+
+            <div class="card">
+                <h3>Add Product</h3>
+                <p>List a new agricultural product in the marketplace.</p>
+                <a href="/farmer/add-product">Add Product</a>
+            </div>
+
+            <div class="card">
+                <h3>My Products</h3>
+                <p>View and manage your product listings.</p>
+                <a href="/farmer/products">View Products</a>
+            </div>
+
+            <div class="card">
+                <h3>Orders</h3>
+                <p>View orders placed by buyers.</p>
+                <a href="/farmer/orders">View Orders</a>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        const token = localStorage.getItem("token");
+        const user = JSON.parse(localStorage.getItem("user"));
+
+        if (!token || !user || user.role !== "farmer") {
+            window.location.href = "/login";
+        } else {
+            document.getElementById("welcome").innerText =
+                `Welcome, ${user.name}`;
+        }
+
+        function logout() {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+
+            window.location.href = "/login";
+        }
+    </script>
+
+</body>
+
+</html>

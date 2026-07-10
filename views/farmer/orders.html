@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Customer Orders</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+
+<body>
+
+
+    <nav class="navbar">
+
+        <h2>Farmer Portal</h2>
+
+        <div>
+
+            <a href="/farmer/dashboard">
+                Dashboard
+            </a>
+
+            <a href="/farmer/add-product">
+                Add Product
+            </a>
+
+            <a href="/farmer/products">
+                My Products
+            </a>
+
+            <a href="/farmer/orders">
+                Orders
+            </a>
+
+            <a href="#" onclick="logout()">
+                Logout
+            </a>
+
+        </div>
+
+    </nav>
+
+
+    <main class="dashboard">
+
+        <h1>Customer Orders</h1>
+
+        <p id="message"></p>
+
+        <div id="orders" class="order-container"></div>
+
+    </main>
+
+
+    <script>
+
+        const token =
+            localStorage.getItem("token");
+
+
+        const user =
+            JSON.parse(
+                localStorage.getItem("user")
+            );
+
+
+        if (
+            !token ||
+            !user ||
+            user.role !== "farmer"
+        ) {
+
+            window.location.href = "/login";
+        }
+
+
+
+        async function loadOrders() {
+
+            const container =
+                document.getElementById("orders");
+
+
+            const message =
+                document.getElementById("message");
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/api/orders/farmer",
+                        {
+
+                            headers: {
+
+                                Authorization:
+                                    `Bearer ${token}`
+
+                            }
+
+                        }
+                    );
+
+
+                const orders =
+                    await response.json();
+
+
+                if (response.status === 401) {
+
+                    localStorage.clear();
+
+                    window.location.href = "/login";
+
+                    return;
+                }
+
+
+                if (!response.ok) {
+
+                    message.innerText =
+                        orders.message ||
+                        "Unable to load orders";
+
+                    return;
+                }
+
+
+                if (orders.length === 0) {
+
+                    message.innerText =
+                        "No customer orders yet.";
+
+                    return;
+                }
+
+
+                container.innerHTML = "";
+
+                message.innerText = "";
+
+
+                orders.forEach(order => {
+
+                    const farmerItems =
+                        order.items.filter(
+                            item =>
+                                String(item.farmer) ===
+                                String(user.id)
+                        );
+
+
+                    if (farmerItems.length === 0) {
+                        return;
+                    }
+
+
+                    const itemsHTML =
+                        farmerItems.map(item => `
+
+                    <div class="order-item">
+
+                        <strong>
+                            ${escapeHTML(item.name)}
+                        </strong>
+
+                        <span>
+
+                            ${item.quantity}
+
+                            ${escapeHTML(item.unit)}
+
+                            ×
+
+                            ₹${item.price}
+
+                        </span>
+
+                    </div>
+
+                `).join("");
+
+
+                    const farmerTotal =
+                        farmerItems.reduce(
+
+                            (total, item) =>
+                                total +
+                                (
+                                    item.price *
+                                    item.quantity
+                                ),
+
+                            0
+
+                        );
+
+
+                    const card =
+                        document.createElement("div");
+
+
+                    card.className =
+                        "order-card";
+
+
+                    card.innerHTML = `
+
+                <div class="order-header">
+
+                    <h2>
+                        Order
+                        ${escapeHTML(order._id)}
+                    </h2>
+
+                    <span class="status-badge">
+
+                        ${escapeHTML(order.status)}
+
+                    </span>
+
+                </div>
+
+
+                <p>
+
+                    <strong>Buyer:</strong>
+
+                    ${escapeHTML(
+                        order.buyer
+                            ? order.buyer.name
+                            : "Unknown Buyer"
+                    )}
+
+                </p>
+
+
+                <p>
+
+                    <strong>Buyer Email:</strong>
+
+                    ${escapeHTML(
+                        order.buyer
+                            ? order.buyer.email
+                            : "Unavailable"
+                    )}
+
+                </p>
+
+
+                ${itemsHTML}
+
+
+                <p>
+
+                    <strong>Your Order Value:</strong>
+
+                    ₹${farmerTotal.toFixed(2)}
+
+                </p>
+
+
+                <p>
+
+                    <strong>Delivery Address:</strong>
+
+                    ${escapeHTML(
+                        order.deliveryAddress
+                    )}
+
+                </p>
+
+
+                <p>
+
+                    <strong>Ordered:</strong>
+
+                    ${new Date(
+                        order.createdAt
+                    ).toLocaleString()}
+
+                </p>
+
+            `;
+
+
+                    container.appendChild(card);
+
+                });
+
+
+            } catch (error) {
+
+                message.innerText =
+                    "Unable to connect to server";
+            }
+
+        }
+
+
+
+        function escapeHTML(value) {
+
+            const element =
+                document.createElement("div");
+
+            element.textContent =
+                String(value);
+
+            return element.innerHTML;
+        }
+
+
+
+        function logout() {
+
+            localStorage.removeItem("token");
+
+            localStorage.removeItem("user");
+
+            window.location.href = "/login";
+        }
+
+
+
+        loadOrders();
+
+    </script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Login | Farmers Market</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+    <div class="auth-container">
+
+        <h1>Login</h1>
+
+        <form id="loginForm">
+
+            <input id="email" type="email" placeholder="Email" required>
+
+            <input id="password" type="password" placeholder="Password" required>
+
+            <button type="submit">
+                Login
+            </button>
+
+        </form>
+
+        <p id="message"></p>
+
+        <p>
+            New user?
+            <a href="/register">Create Account</a>
+        </p>
+
+    </div>
+
+
+    <script>
+
+        const form = document.getElementById("loginForm");
+
+        form.addEventListener("submit", async (event) => {
+
+            event.preventDefault();
+
+            const data = {
+
+                email:
+                    document.getElementById("email").value,
+
+                password:
+                    document.getElementById("password").value
+            };
+
+
+            try {
+
+                const response =
+                    await fetch("/api/auth/login", {
+
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify(data)
+                    });
+
+
+                const result =
+                    await response.json();
+
+
+                document.getElementById("message")
+                    .innerText = result.message;
+
+
+                if (response.ok) {
+
+                    localStorage.setItem(
+                        "token",
+                        result.token
+                    );
+
+                    localStorage.setItem(
+                        "user",
+                        JSON.stringify(result.user)
+                    );
+
+
+                    if (result.user.role === "farmer") {
+
+                        window.location.href =
+                            "/farmer/dashboard";
+
+                    } else {
+
+                        window.location.href =
+                            "/buyer/dashboard";
+                    }
+                }
+
+            } catch (error) {
+
+                document.getElementById("message")
+                    .innerText =
+                    "Unable to connect to server";
+            }
+
+        });
+
+    </script>
+
+</body>
+
+</html>

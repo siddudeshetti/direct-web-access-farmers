@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Marketplace</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+
+<body>
+
+
+    <nav class="navbar">
+
+        <h2>Buyer Portal</h2>
+
+        <div>
+
+            <a href="/buyer/dashboard">
+                Dashboard
+            </a>
+
+            <a href="/buyer/products">
+                Marketplace
+            </a>
+
+            <a href="/buyer/cart">
+                Cart
+            </a>
+
+            <a href="/buyer/orders">
+                My Orders
+            </a>
+
+            <a href="#" onclick="logout()">
+                Logout
+            </a>
+
+        </div>
+
+    </nav>
+
+
+    <main class="dashboard">
+
+        <h1>Marketplace</h1>
+
+
+        <div class="marketplace-controls">
+
+            <input id="search" type="text" placeholder="Search products...">
+
+
+            <select id="categoryFilter">
+
+                <option value="">
+                    All Categories
+                </option>
+
+                <option value="Vegetables">
+                    Vegetables
+                </option>
+
+                <option value="Fruits">
+                    Fruits
+                </option>
+
+                <option value="Grains">
+                    Grains
+                </option>
+
+                <option value="Dairy">
+                    Dairy
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <p id="message"></p>
+
+
+        <div id="products" class="product-grid"></div>
+
+
+    </main>
+
+
+    <script>
+
+        const token =
+            localStorage.getItem("token");
+
+
+        const user =
+            JSON.parse(localStorage.getItem("user"));
+
+
+        if (!token || !user || user.role !== "buyer") {
+
+            window.location.href = "/login";
+        }
+
+
+        let allProducts = [];
+
+
+
+        async function loadProducts() {
+
+            const message =
+                document.getElementById("message");
+
+
+            try {
+
+                const response =
+                    await fetch("/api/products");
+
+
+                const result =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    message.innerText =
+                        result.message ||
+                        "Unable to load products";
+
+                    return;
+                }
+
+
+                allProducts = result;
+
+
+                displayProducts(allProducts);
+
+
+            } catch (error) {
+
+                message.innerText =
+                    "Unable to connect to server";
+            }
+
+        }
+
+
+
+        function displayProducts(products) {
+
+            const container =
+                document.getElementById("products");
+
+
+            const message =
+                document.getElementById("message");
+
+
+            container.innerHTML = "";
+
+
+            if (products.length === 0) {
+
+                message.innerText =
+                    "No products available.";
+
+                return;
+            }
+
+
+            message.innerText = "";
+
+
+            products.forEach(product => {
+
+                const card =
+                    document.createElement("div");
+
+
+                card.className =
+                    "product-card";
+
+
+                const farmerName =
+                    product.farmer
+                        ? product.farmer.name
+                        : "Unknown Farmer";
+
+
+                card.innerHTML = `
+
+            <h2>
+                ${escapeHTML(product.name)}
+            </h2>
+
+
+            <p>
+
+                <strong>Category:</strong>
+
+                ${escapeHTML(product.category)}
+
+            </p>
+
+
+            <p>
+
+                <strong>Description:</strong>
+
+                ${escapeHTML(
+                    product.description ||
+                    "No description"
+                )}
+
+            </p>
+
+
+            <p>
+
+                <strong>Price:</strong>
+
+                ₹${product.price}
+                per
+                ${escapeHTML(product.unit)}
+
+            </p>
+
+
+            <p>
+
+                <strong>Available:</strong>
+
+                ${product.quantity}
+                ${escapeHTML(product.unit)}
+
+            </p>
+
+
+            <p>
+
+                <strong>Location:</strong>
+
+                ${escapeHTML(
+                    product.location ||
+                    "Not specified"
+                )}
+
+            </p>
+
+
+            <p>
+
+                <strong>Farmer:</strong>
+
+                ${escapeHTML(farmerName)}
+
+            </p>
+
+
+            <label>
+
+                Quantity
+
+            </label>
+
+
+            <input
+
+                class="quantity-input"
+
+                id="quantity-${product._id}"
+
+                type="number"
+
+                min="1"
+
+                max="${product.quantity}"
+
+                value="1"
+
+            >
+
+
+            <button
+
+                class="add-cart-button"
+
+                onclick="addToCart('${product._id}')"
+
+            >
+
+                Add to Cart
+
+            </button>
+
+        `;
+
+
+                container.appendChild(card);
+
+            });
+
+        }
+
+
+
+        function addToCart(productId) {
+
+            const product =
+                allProducts.find(
+                    item =>
+                        item._id === productId
+                );
+
+
+            if (!product) {
+                return;
+            }
+
+
+            const quantityInput =
+                document.getElementById(
+                    `quantity-${productId}`
+                );
+
+
+            const quantity =
+                Number(quantityInput.value);
+
+
+            if (
+                quantity < 1 ||
+                quantity > product.quantity
+            ) {
+
+                alert("Invalid quantity");
+
+                return;
+            }
+
+
+            let cart =
+                JSON.parse(
+                    localStorage.getItem("cart")
+                ) || [];
+
+
+            const existingItem =
+                cart.find(
+                    item =>
+                        item.product._id === productId
+                );
+
+
+            if (existingItem) {
+
+                const newQuantity =
+                    existingItem.quantity + quantity;
+
+
+                if (newQuantity > product.quantity) {
+
+                    alert(
+                        "Requested quantity exceeds available stock"
+                    );
+
+                    return;
+                }
+
+
+                existingItem.quantity =
+                    newQuantity;
+
+            } else {
+
+                cart.push({
+
+                    product: product,
+
+                    quantity: quantity
+
+                });
+
+            }
+
+
+            localStorage.setItem(
+                "cart",
+                JSON.stringify(cart)
+            );
+
+
+            alert("Product added to cart");
+
+        }
+
+
+
+        function filterProducts() {
+
+            const searchValue =
+                document
+                    .getElementById("search")
+                    .value
+                    .toLowerCase();
+
+
+            const category =
+                document
+                    .getElementById("categoryFilter")
+                    .value;
+
+
+            const filtered =
+                allProducts.filter(product => {
+
+                    const matchesSearch =
+
+                        product.name
+                            .toLowerCase()
+                            .includes(searchValue)
+
+                        ||
+
+                        product.category
+                            .toLowerCase()
+                            .includes(searchValue);
+
+
+                    const matchesCategory =
+
+                        category === ""
+
+                        ||
+
+                        product.category === category;
+
+
+                    return (
+                        matchesSearch &&
+                        matchesCategory
+                    );
+
+                });
+
+
+            displayProducts(filtered);
+
+        }
+
+
+
+        function escapeHTML(value) {
+
+            const element =
+                document.createElement("div");
+
+            element.textContent =
+                String(value);
+
+            return element.innerHTML;
+        }
+
+
+
+        function logout() {
+
+            localStorage.removeItem("token");
+
+            localStorage.removeItem("user");
+
+            localStorage.removeItem("cart");
+
+            window.location.href = "/login";
+        }
+
+
+
+        document
+            .getElementById("search")
+            .addEventListener(
+                "input",
+                filterProducts
+            );
+
+
+        document
+            .getElementById("categoryFilter")
+            .addEventListener(
+                "change",
+                filterProducts
+            );
+
+
+        loadProducts();
+
+    </script>
+
+
+</body>
+
+</html>
